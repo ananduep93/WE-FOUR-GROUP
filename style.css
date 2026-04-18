@@ -160,6 +160,34 @@ input:focus, textarea:focus {
     flex-grow: 1;
 }
 
+/* Manual Location Input */
+.manual-location-wrap {
+    margin-top: 0.6rem;
+}
+
+.manual-location-input {
+    width: 100%;
+    background: var(--bg-color);
+    border: 1px dashed var(--border-color);
+    border-radius: 0.8rem;
+    color: var(--text-primary);
+    padding: 0.7rem 1rem;
+    font-size: 0.9rem;
+    transition: var(--transition);
+}
+
+.manual-location-input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    border-style: solid;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.manual-location-input::placeholder {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
 /* Photo Uploads */
 .photo-grid {
     display: grid;
