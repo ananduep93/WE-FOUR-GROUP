@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WE FOUR GROUP - Vehicle Inspection</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="dark-theme">
+    <nav class="navbar">
+        <div class="container nav-content">
+            <h1 class="logo">WE FOUR GROUP</h1>
+            <div class="nav-actions">
+                <button id="settings-btn" class="btn-icon" title="Settings">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <!-- Form Section -->
+        <section id="form-section">
+            <div class="section-header">
+                <h2>Vehicle Inspection Form</h2>
+                <p>Please fill out all fields carefully</p>
+            </div>
+
+            <form id="inspection-form" class="inspection-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="id-number">ID Number</label>
+                        <input type="text" id="id-number" name="idNumber" required placeholder="Enter ID Number">
+                    </div>
+                    <div class="form-group">
+                        <label for="car-number">Car Number</label>
+                        <input type="text" id="car-number" name="carNumber" required placeholder="Ex: GA-01-AB-1234">
+                    </div>
+                    <div class="form-group">
+                        <label for="kilometer">Kilometer</label>
+                        <input type="number" id="kilometer" name="kilometer" required placeholder="Enter KM reading">
+                    </div>
+                </div>
+
+                <div class="form-group full-width">
+                    <label>Location</label>
+                    <div class="location-container">
+                        <button type="button" id="get-location" class="btn btn-secondary">
+                            <i class="fas fa-location-dot"></i> Fetch GPS Location
+                        </button>
+                        <span id="location-display" class="location-text">Not fetched yet</span>
+                        <input type="hidden" id="location-coords" name="location">
+                    </div>
+                </div>
+
+                <div class="photo-grid">
+                    <div class="form-group photo-upload">
+                        <label>Car Photos (All Sides)</label>
+                        <div class="upload-box" onclick="document.getElementById('car-photos').click()">
+                            <i class="fas fa-images"></i>
+                            <span>Select Multiple Photos</span>
+                            <input type="file" id="car-photos" name="carPhotos" multiple accept="image/*" hidden>
+                        </div>
+                        <div id="car-photos-preview" class="preview-container"></div>
+                    </div>
+
+                    <div class="form-group photo-upload">
+                        <label>Engine Oil Level</label>
+                        <div class="upload-box" onclick="document.getElementById('oil-photo').click()">
+                            <i class="fas fa-oil-can"></i>
+                            <span>Upload Image</span>
+                            <input type="file" id="oil-photo" name="oilPhoto" accept="image/*" hidden>
+                        </div>
+                        <div id="oil-photo-preview" class="preview-container"></div>
+                    </div>
+
+                    <div class="form-group photo-upload">
+                        <label>CNG Level</label>
+                        <div class="upload-box" onclick="document.getElementById('cng-photo').click()">
+                            <i class="fas fa-gas-pump"></i>
+                            <span>Upload Image</span>
+                            <input type="file" id="cng-photo" name="cngPhoto" accept="image/*" hidden>
+                        </div>
+                        <div id="cng-photo-preview" class="preview-container"></div>
+                    </div>
+
+                    <div class="form-group photo-upload">
+                        <label>Petrol Level</label>
+                        <div class="upload-box" onclick="document.getElementById('petrol-photo').click()">
+                            <i class="fas fa-gas-pump"></i>
+                            <span>Upload Image</span>
+                            <input type="file" id="petrol-photo" name="petrolPhoto" accept="image/*" hidden>
+                        </div>
+                        <div id="petrol-photo-preview" class="preview-container"></div>
+                    </div>
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="complaint">Complaint</label>
+                    <textarea id="complaint" name="complaint" rows="3" placeholder="Enter any complaints..."></textarea>
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="note">Important Note</label>
+                    <textarea id="note" name="note" rows="3" placeholder="Any additional notes..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" id="submit-btn" class="btn btn-primary">
+                        <span class="btn-text">Submit Inspection</span>
+                        <div class="spinner hidden"></div>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Admin Section -->
+        <section id="admin-section" class="hidden">
+            <div class="section-header">
+                <div class="header-with-back">
+                    <button id="back-to-form" class="btn-back"><i class="fas fa-arrow-left"></i></button>
+                    <div>
+                        <h2>Admin Dashboard</h2>
+                        <p>All Submitted Inspection Records</p>
+                    </div>
+                </div>
+                <div id="admin-actions">
+                    <button id="refresh-data" class="btn btn-secondary btn-sm"><i class="fas fa-sync"></i> Refresh</button>
+                </div>
+            </div>
+
+            <div id="data-container" class="data-grid">
+                <!-- Data cards will be injected here -->
+            </div>
+            <div id="admin-loading" class="loading-state hidden">
+                <div class="spinner"></div>
+                <p>Loading records...</p>
+            </div>
+            <div id="admin-empty" class="empty-state hidden">
+                <i class="fas fa-folder-open"></i>
+                <p>No records found.</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Settings Menu Modal -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Settings</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <button id="view-data-btn" class="menu-item">
+                    <i class="fas fa-database"></i>
+                    <span>View Data</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="password-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Admin Access</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Please enter the admin password:</p>
+                <div class="input-with-icon">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="admin-password" placeholder="Password">
+                </div>
+                <p id="password-error" class="error-text hidden">Incorrect password. Please try again.</p>
+                <button id="verify-password" class="btn btn-primary full-width">Unlock Dashboard</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast hidden"></div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
