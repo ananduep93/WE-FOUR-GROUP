@@ -233,11 +233,65 @@ input:focus, textarea:focus {
 }
 
 .preview-img {
-    width: 60px;
-    height: 60px;
+    width: 80px;
+    height: 80px;
     border-radius: 0.5rem;
     object-fit: cover;
     border: 1px solid var(--border-color);
+    position: relative;
+}
+
+.preview-item {
+    position: relative;
+    display: inline-block;
+}
+
+.remove-btn {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: var(--error-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.add-another-btn {
+    width: 80px;
+    height: 80px;
+    border-radius: 0.5rem;
+    border: 2px dashed var(--border-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-hover);
+    color: var(--accent-color);
+    cursor: pointer;
+    transition: var(--transition);
+    gap: 4px;
+}
+
+.add-another-btn:hover {
+    border-color: var(--accent-color);
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.add-another-btn i {
+    font-size: 1.2rem;
+}
+
+.add-another-btn span {
+    font-size: 0.6rem;
+    font-weight: 600;
 }
 
 /* Buttons */
@@ -350,18 +404,63 @@ input:focus, textarea:focus {
 }
 
 .card-photos {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.5rem;
-    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    margin-top: 1.5rem;
 }
 
-.card-photos img {
+.photo-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    width: calc(33.33% - 0.6rem);
+    min-width: 80px;
+}
+
+.photo-item img {
     width: 100%;
     aspect-ratio: 1;
     object-fit: cover;
-    border-radius: 0.4rem;
+    border-radius: 0.6rem;
     cursor: pointer;
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
+}
+
+.photo-item img:hover {
+    transform: scale(1.05);
+    border-color: var(--accent-color);
+}
+
+.photo-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+}
+
+.btn-delete {
+    background: rgba(248, 81, 73, 0.1);
+    color: var(--error-color);
+    border: 1px solid rgba(248, 81, 73, 0.2);
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.btn-delete:hover {
+    background: var(--error-color);
+    color: white;
 }
 
 /* Modals */
@@ -498,5 +597,82 @@ input:focus, textarea:focus {
     }
     .photo-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+/* Webcam Modal Specifics */
+.webcam-modal-content {
+    max-width: 600px;
+}
+
+.webcam-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.video-container {
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: #000;
+    border-radius: 1rem;
+    overflow: hidden;
+    position: relative;
+    border: 2px solid var(--border-color);
+}
+
+#webcam-video, #webcam-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1); /* Mirror effect */
+}
+
+.webcam-controls {
+    display: flex;
+    gap: 1rem;
+    width: 100%;
+    justify-content: center;
+}
+
+#shutter-btn {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    background: #fff;
+    color: var(--bg-color);
+    box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.2);
+    transition: var(--transition);
+}
+
+#shutter-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.3);
+}
+
+#webcam-action-btns {
+    display: flex;
+    gap: 1rem;
+}
+
+.btn-success {
+    background: var(--success-color);
+    color: white;
+}
+
+.btn-success:hover {
+    background: #2ea043;
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .webcam-modal-content {
+        padding: 1.5rem;
     }
 }

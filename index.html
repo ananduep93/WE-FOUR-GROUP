@@ -47,58 +47,53 @@
                 </div>
 
                 <div class="form-group full-width">
-                    <label>Location</label>
-                    <div class="location-container">
-                        <button type="button" id="get-location" class="btn btn-secondary">
-                            <i class="fas fa-location-dot"></i> Fetch GPS Location
-                        </button>
-                        <span id="location-display" class="location-text">Not fetched yet</span>
-                        <input type="hidden" id="location-coords" name="location">
-                    </div>
-                    <div class="manual-location-wrap">
-                        <input type="text" id="manual-location" placeholder="Or type location manually (e.g. MG Road, Panaji)" class="manual-location-input">
-                    </div>
+                    <label for="location">Location</label>
+                    <input type="text" id="location" name="location" required placeholder="Enter location (e.g. Panaji, Goa)">
                 </div>
 
                 <div class="photo-grid">
                     <div class="form-group photo-upload">
                         <label>Car Photos (All Sides)</label>
-                        <div class="upload-box" onclick="document.getElementById('car-photos').click()">
+                        <div class="upload-box" data-category="car">
                             <i class="fas fa-images"></i>
-                            <span>Select Multiple Photos</span>
-                            <input type="file" id="car-photos" name="carPhotos" multiple accept="image/*" hidden>
+                            <span>Update Photos</span>
                         </div>
                         <div id="car-photos-preview" class="preview-container"></div>
+                        <input type="file" id="car-gallery" name="carPhotos" multiple accept="image/*" hidden>
+                        <input type="file" id="car-camera" name="carPhotos" capture="camera" accept="image/*" hidden>
                     </div>
 
                     <div class="form-group photo-upload">
                         <label>Engine Oil Level</label>
-                        <div class="upload-box" onclick="document.getElementById('oil-photo').click()">
+                        <div class="upload-box" data-category="oil">
                             <i class="fas fa-oil-can"></i>
-                            <span>Upload Image</span>
-                            <input type="file" id="oil-photo" name="oilPhoto" accept="image/*" hidden>
+                            <span>Update Photos</span>
                         </div>
                         <div id="oil-photo-preview" class="preview-container"></div>
+                        <input type="file" id="oil-gallery" name="oilPhoto" multiple accept="image/*" hidden>
+                        <input type="file" id="oil-camera" name="oilPhoto" capture="camera" accept="image/*" hidden>
                     </div>
 
                     <div class="form-group photo-upload">
                         <label>CNG Level</label>
-                        <div class="upload-box" onclick="document.getElementById('cng-photo').click()">
+                        <div class="upload-box" data-category="cng">
                             <i class="fas fa-gas-pump"></i>
-                            <span>Upload Image</span>
-                            <input type="file" id="cng-photo" name="cngPhoto" accept="image/*" hidden>
+                            <span>Update Photos</span>
                         </div>
                         <div id="cng-photo-preview" class="preview-container"></div>
+                        <input type="file" id="cng-gallery" name="cngPhoto" multiple accept="image/*" hidden>
+                        <input type="file" id="cng-camera" name="cngPhoto" capture="camera" accept="image/*" hidden>
                     </div>
 
                     <div class="form-group photo-upload">
                         <label>Petrol Level</label>
-                        <div class="upload-box" onclick="document.getElementById('petrol-photo').click()">
+                        <div class="upload-box" data-category="petrol">
                             <i class="fas fa-gas-pump"></i>
-                            <span>Upload Image</span>
-                            <input type="file" id="petrol-photo" name="petrolPhoto" accept="image/*" hidden>
+                            <span>Update Photos</span>
                         </div>
                         <div id="petrol-photo-preview" class="preview-container"></div>
+                        <input type="file" id="petrol-gallery" name="petrolPhoto" multiple accept="image/*" hidden>
+                        <input type="file" id="petrol-camera" name="petrolPhoto" capture="camera" accept="image/*" hidden>
                     </div>
                 </div>
 
@@ -162,6 +157,56 @@
                     <i class="fas fa-database"></i>
                     <span>View Data</span>
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo Source Selection Modal -->
+    <div id="source-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Select Photo Source</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <button id="source-camera" class="menu-item">
+                    <i class="fas fa-camera"></i>
+                    <span>Camera (Capture Image)</span>
+                </button>
+                <button id="source-gallery" class="menu-item">
+                    <i class="fas fa-images"></i>
+                    <span>Gallery (Select from Storage)</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Webcam Capture Modal -->
+    <div id="webcam-modal" class="modal hidden">
+        <div class="modal-content webcam-modal-content">
+            <div class="modal-header">
+                <h3>Camera Capture</h3>
+                <button id="close-webcam" class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body webcam-body">
+                <div class="video-container">
+                    <video id="webcam-video" autoplay playsinline></video>
+                    <canvas id="webcam-canvas" class="hidden"></canvas>
+                    <img id="webcam-preview" class="hidden" alt="Snapshot">
+                </div>
+                <div class="webcam-controls">
+                    <button id="shutter-btn" class="btn btn-primary">
+                        <i class="fas fa-camera"></i> Take Photo
+                    </button>
+                    <div id="webcam-action-btns" class="hidden">
+                        <button id="retake-btn" class="btn btn-secondary">
+                            <i class="fas fa-sync"></i> Retake
+                        </button>
+                        <button id="use-photo-btn" class="btn btn-success">
+                            <i class="fas fa-check"></i> Use Photo
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

@@ -1,24 +1,17 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { firebaseConfig, imgbbApiKey } from "./config.js";
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-console.log("✅ Firebase initialized with Free Firestore.");
+console.log("✅ Firebase initialized.");
 
 // --- DOM Elements ---
 const inspectionForm = document.getElementById('inspection-form');
-const carPhotosInput = document.getElementById('car-photos');
-const oilPhotoInput = document.getElementById('oil-photo');
-const cngPhotoInput = document.getElementById('cng-photo');
-const petrolPhotoInput = document.getElementById('petrol-photo');
-const getLocationBtn = document.getElementById('get-location');
-const locationDisplay = document.getElementById('location-display');
-const locationCoords = document.getElementById('location-coords');
+const locationInput = document.getElementById('location');
 const submitBtn = document.getElementById('submit-btn');
-const manualLocationInput = document.getElementById('manual-location');
 
 const settingsBtn = document.getElementById('settings-btn');
 const settingsModal = document.getElementById('settings-modal');
@@ -27,6 +20,10 @@ const passwordModal = document.getElementById('password-modal');
 const adminPasswordInput = document.getElementById('admin-password');
 const verifyPasswordBtn = document.getElementById('verify-password');
 const passwordError = document.getElementById('password-error');
+
+const sourceModal = document.getElementById('source-modal');
+const sourceCameraBtn = document.getElementById('source-camera');
+const sourceGalleryBtn = document.getElementById('source-gallery');
 
 const formSection = document.getElementById('form-section');
 const adminSection = document.getElementById('admin-section');
@@ -38,6 +35,13 @@ const adminEmpty = document.getElementById('admin-empty');
 
 // --- State ---
 let isSubmitting = false;
+let currentUploadCategory = null;
+const photoState = {
+    car: [],
+    oil: [],
+    cng: [],
+    petrol: []
+};
 
 // --- Helper: Show Toast ---
 function showToast(message, type = 'info') {
@@ -48,69 +52,181 @@ function showToast(message, type = 'info') {
     setTimeout(() => { toast.classList.add('hidden'); }, 4000);
 }
 
-// --- Image Preview ---
-function setupPreview(input, containerId) {
-    input.addEventListener('change', () => {
-        const container = document.getElementById(containerId);
-        container.innerHTML = '';
-        Array.from(input.files).forEach(file => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = document.createElement('img');
-                img.src = e.target.result;
-                img.classList.add('preview-img');
-                container.appendChild(img);
+// --- Photo Source Logic ---
+const webcamModal = document.getElementById('webcam-modal');
+const webcamVideo = document.getElementById('webcam-video');
+const webcamCanvas = document.getElementById('webcam-canvas');
+const webcamPreview = document.getElementById('webcam-preview');
+const shutterBtn = document.getElementById('shutter-btn');
+const retakeBtn = document.getElementById('retake-btn');
+const usePhotoBtn = document.getElementById('use-photo-btn');
+const webcamActionBtns = document.getElementById('webcam-action-btns');
+const closeWebcamBtn = document.getElementById('close-webcam');
+
+let webcamStream = null;
+
+document.querySelectorAll('.upload-box').forEach(box => {
+    box.addEventListener('click', () => {
+        currentUploadCategory = box.dataset.category;
+        sourceModal.classList.remove('hidden');
+    });
+});
+
+document.querySelectorAll('.close-modal').forEach(btn => {
+    btn.addEventListener('click', () => {
+        settingsModal.classList.add('hidden');
+        passwordModal.classList.add('hidden');
+        sourceModal.classList.add('hidden');
+        if (btn.id === 'close-webcam') stopWebcam();
+    });
+});
+
+// Device detection helper
+const isMobile = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+sourceCameraBtn.addEventListener('click', async () => {
+    sourceModal.classList.add('hidden');
+    
+    if (isMobile()) {
+        // Direct mobile camera trigger
+        const input = document.getElementById(`${currentUploadCategory}-camera`);
+        if (input) input.click();
+    } else {
+        // Desktop/Webcam UI
+        startWebcam();
+    }
+});
+
+sourceGalleryBtn.addEventListener('click', () => {
+    const input = document.getElementById(`${currentUploadCategory}-gallery`);
+    if (input) input.click();
+    sourceModal.classList.add('hidden');
+});
+
+// --- Webcam Logic ---
+async function startWebcam() {
+    try {
+        webcamStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+        webcamVideo.srcObject = webcamStream;
+        webcamModal.classList.remove('hidden');
+        
+        // Reset UI
+        webcamVideo.classList.remove('hidden');
+        webcamPreview.classList.add('hidden');
+        shutterBtn.classList.remove('hidden');
+        webcamActionBtns.classList.add('hidden');
+    } catch (err) {
+        console.error("Webcam Error:", err);
+        showToast("Webcam access denied or not available. Falling back to file upload.", "error");
+        // Fallback for desktop: just open the file picker even if camera button was clicked
+        const input = document.getElementById(`${currentUploadCategory}-camera`);
+        if (input) input.click();
+    }
+}
+
+function stopWebcam() {
+    if (webcamStream) {
+        webcamStream.getTracks().forEach(track => track.stop());
+        webcamStream = null;
+    }
+    webcamModal.classList.add('hidden');
+}
+
+shutterBtn.addEventListener('click', () => {
+    // Set canvas dimensions to match video
+    webcamCanvas.width = webcamVideo.videoWidth;
+    webcamCanvas.height = webcamVideo.videoHeight;
+    
+    // Draw current frame to canvas
+    const ctx = webcamCanvas.getContext('2d');
+    ctx.translate(webcamCanvas.width, 0);
+    ctx.scale(-1, 1); // Maintain mirror effect
+    ctx.drawImage(webcamVideo, 0, 0, webcamCanvas.width, webcamCanvas.height);
+    
+    // Show preview
+    webcamPreview.src = webcamCanvas.toDataURL('image/jpeg');
+    webcamVideo.classList.add('hidden');
+    webcamPreview.classList.remove('hidden');
+    shutterBtn.classList.add('hidden');
+    webcamActionBtns.classList.remove('hidden');
+});
+
+retakeBtn.addEventListener('click', () => {
+    webcamVideo.classList.remove('hidden');
+    webcamPreview.classList.add('hidden');
+    shutterBtn.classList.remove('hidden');
+    webcamActionBtns.classList.add('hidden');
+});
+
+usePhotoBtn.addEventListener('click', () => {
+    webcamCanvas.toBlob((blob) => {
+        const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+        handleFileSelection(currentUploadCategory, [file]);
+        stopWebcam();
+        showToast("Photo captured!", "success");
+    }, 'image/jpeg', 0.9);
+});
+
+// Helper to handle file selection
+function handleFileSelection(category, files) {
+    const newFiles = Array.from(files);
+    photoState[category] = [...photoState[category], ...newFiles];
+    renderPreview(category);
+}
+
+// Attach listeners to all hidden inputs
+['car', 'oil', 'cng', 'petrol'].forEach(cat => {
+    const gallery = document.getElementById(`${cat}-gallery`);
+    const camera = document.getElementById(`${cat}-camera`);
+    
+    if (gallery) gallery.addEventListener('change', (e) => handleFileSelection(cat, e.target.files));
+    if (camera) camera.addEventListener('change', (e) => handleFileSelection(cat, e.target.files));
+});
+
+function renderPreview(category) {
+    const container = document.getElementById(`${category}-photos-preview`) || document.getElementById(`${category}-photo-preview`);
+    container.innerHTML = '';
+    
+    photoState[category].forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const wrap = document.createElement('div');
+            wrap.className = 'preview-item';
+            
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.classList.add('preview-img');
+            
+            const del = document.createElement('button');
+            del.innerHTML = '&times;';
+            del.className = 'remove-btn';
+            del.onclick = (event) => {
+                event.stopPropagation();
+                photoState[category].splice(index, 1);
+                renderPreview(category);
             };
-            reader.readAsDataURL(file);
-        });
+            
+            wrap.appendChild(img);
+            wrap.appendChild(del);
+            container.appendChild(wrap);
+            
+            // Add Another button logic
+            if (index === photoState[category].length - 1) {
+                const addBtn = document.createElement('div');
+                addBtn.className = 'add-another-btn';
+                addBtn.innerHTML = '<i class="fas fa-plus"></i><span>Add Another</span>';
+                addBtn.onclick = () => {
+                    currentUploadCategory = category;
+                    sourceModal.classList.remove('hidden');
+                };
+                container.appendChild(addBtn);
+            }
+        };
+        reader.readAsDataURL(file);
     });
 }
 
-setupPreview(carPhotosInput, 'car-photos-preview');
-setupPreview(oilPhotoInput, 'oil-photo-preview');
-setupPreview(cngPhotoInput, 'cng-photo-preview');
-setupPreview(petrolPhotoInput, 'petrol-photo-preview');
-
-// --- Geolocation ---
-getLocationBtn.addEventListener('click', () => {
-    if (!navigator.geolocation) {
-        showToast('Geolocation not supported. Please type location manually.', 'error');
-        return;
-    }
-    getLocationBtn.disabled = true;
-    locationDisplay.textContent = 'Fetching location...';
-    navigator.geolocation.getCurrentPosition(
-        (position) => {
-            const lat = position.coords.latitude.toFixed(6);
-            const lng = position.coords.longitude.toFixed(6);
-            const coords = `${lat}, ${lng}`;
-            locationCoords.value = coords;
-            locationDisplay.textContent = `📍 ${coords}`;
-            getLocationBtn.disabled = false;
-            showToast('Location fetched!', 'success');
-        },
-        (error) => {
-            locationDisplay.textContent = 'GPS failed — use manual input below';
-            getLocationBtn.disabled = false;
-            showToast('GPS unavailable. Please type location manually.', 'error');
-        },
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
-    );
-});
-
-// --- Manual Location ---
-manualLocationInput.addEventListener('input', () => {
-    const val = manualLocationInput.value.trim();
-    if (val) {
-        locationCoords.value = val;
-        locationDisplay.textContent = `📍 ${val}`;
-    } else {
-        locationCoords.value = '';
-        locationDisplay.textContent = 'Not fetched yet';
-    }
-});
-
-// --- Compress Image (simple, single-pass) ---
+// --- Compress Image ---
 function compressImage(file) {
     return new Promise((resolve) => {
         if (!file) return resolve(null);
@@ -133,44 +249,34 @@ function compressImage(file) {
                 }, 'image/jpeg', quality);
             };
         };
-        reader.onerror = () => resolve(file); // fallback: use original
+        reader.onerror = () => resolve(file);
     });
 }
 
-// --- Upload Single File to ImgBB (Completely Free) ---
+// --- Upload to ImgBB ---
 async function uploadToImgBB(file) {
     if (!file) return null;
-    console.log(`⬆️ Starting ImgBB upload: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
-    
     const formData = new FormData();
     formData.append('image', file);
-    
     try {
         const response = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
             method: 'POST',
             body: formData
         });
-        
         const result = await response.json();
-        
-        if (result.success) {
-            console.log(`✅ Done: ${file.name} -> ${result.data.display_url}`);
-            return result.data.display_url;
-        } else {
-            throw new Error(result.error.message || "ImgBB upload failed");
-        }
+        if (result.success) return result.data.display_url;
+        throw new Error(result.error.message || "Upload failed");
     } catch (error) {
         console.error(`❌ ImgBB error:`, error);
-        throw new Error(`Failed to upload image: ${error.message}. Please check your ImgBB API Key in config.js.`);
+        throw new Error(`Upload error: ${error.message}`);
     }
 }
 
-// --- Update Button Progress Text ---
 let uploadedCount = 0;
 let totalCount = 0;
 function updateProgress() {
     uploadedCount++;
-    submitBtn.querySelector('.btn-text').textContent = `Uploading ${uploadedCount}/${totalCount} files...`;
+    submitBtn.querySelector('.btn-text').textContent = `Uploading ${uploadedCount}/${totalCount}...`;
 }
 
 // --- Form Submission ---
@@ -178,11 +284,9 @@ inspectionForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
 
-    const formData = new FormData(inspectionForm);
-    const idNumber = formData.get('idNumber').trim();
-
-    if (!locationCoords.value.trim()) {
-        showToast('Please fetch GPS or type a location first', 'error');
+    const allPhotos = [...photoState.car, ...photoState.oil, ...photoState.cng, ...photoState.petrol];
+    if (allPhotos.length === 0) {
+        showToast('Please add at least one photo', 'error');
         return;
     }
 
@@ -190,70 +294,51 @@ inspectionForm.addEventListener('submit', async (e) => {
         isSubmitting = true;
         submitBtn.disabled = true;
         submitBtn.querySelector('.spinner').classList.remove('hidden');
-        submitBtn.querySelector('.btn-text').textContent = 'Compressing images...';
+        submitBtn.querySelector('.btn-text').textContent = 'Compressing...';
 
-        const ts = Date.now();
-        const carFiles = Array.from(carPhotosInput.files);
-        const oilFile = oilPhotoInput.files[0] || null;
-        const cngFile = cngPhotoInput.files[0] || null;
-        const petrolFile = petrolPhotoInput.files[0] || null;
-
-        // Count total files to upload
-        totalCount = carFiles.length + [oilFile, cngFile, petrolFile].filter(Boolean).length;
+        totalCount = allPhotos.length;
         uploadedCount = 0;
 
-        // Compress all in parallel
-        const [compressedOil, compressedCng, compressedPetrol, ...compressedCars] = await Promise.all([
-            compressImage(oilFile),
-            compressImage(cngFile),
-            compressImage(petrolFile),
-            ...carFiles.map(f => compressImage(f))
-        ]);
+        // Compress and upload by category
+        const uploadCategory = async (files) => {
+            const compressed = await Promise.all(files.map(f => compressImage(f)));
+            return await Promise.all(compressed.map(f => uploadToImgBB(f).then(u => { updateProgress(); return u; })));
+        };
 
-        submitBtn.querySelector('.btn-text').textContent = `Uploading 0/${totalCount} files...`;
+        submitBtn.querySelector('.btn-text').textContent = `Uploading 0/${totalCount}...`;
 
-        // Upload all in parallel to ImgBB
-        const [oilURL, cngURL, petrolURL, ...carURLs] = await Promise.all([
-            compressedOil  ? uploadToImgBB(compressedOil).then(u => { updateProgress(); return u; })  : Promise.resolve(null),
-            compressedCng  ? uploadToImgBB(compressedCng).then(u => { updateProgress(); return u; })  : Promise.resolve(null),
-            compressedPetrol ? uploadToImgBB(compressedPetrol).then(u => { updateProgress(); return u; }) : Promise.resolve(null),
-            ...compressedCars.map((f, i) =>
-                f ? uploadToImgBB(f).then(u => { updateProgress(); return u; }) : Promise.resolve(null)
-            )
-        ]);
+        const carURLs = await uploadCategory(photoState.car);
+        const oilURLs = await uploadCategory(photoState.oil);
+        const cngURLs = await uploadCategory(photoState.cng);
+        const petrolURLs = await uploadCategory(photoState.petrol);
 
-        const carPhotoURLs = carURLs.filter(Boolean);
+        submitBtn.querySelector('.btn-text').textContent = 'Saving...';
 
-        submitBtn.querySelector('.btn-text').textContent = 'Saving to database...';
-
-        // Save to Firestore
+        const formData = new FormData(inspectionForm);
         await addDoc(collection(db, 'inspections'), {
-            idNumber,
+            idNumber: formData.get('idNumber').trim(),
             carNumber: formData.get('carNumber').trim(),
             kilometer: Number(formData.get('kilometer')),
-            location: locationCoords.value.trim(),
+            location: locationInput.value.trim(),
             complaint: formData.get('complaint') || '',
             note: formData.get('note') || '',
-            carPhotoURLs,
-            oilPhotoURL: oilURL,
-            cngPhotoURL: cngURL,
-            petrolPhotoURL: petrolURL,
+            carPhotoURLs: carURLs,
+            oilPhotoURLs: oilURLs,
+            cngPhotoURLs: cngURLs,
+            petrolPhotoURLs: petrolURLs,
             timestamp: serverTimestamp()
         });
 
-        console.log("✅ Firestore record saved!");
-        showToast('Inspection submitted successfully! ✅', 'success');
-
-        // Reset form
+        showToast('Submitted successfully! ✅', 'success');
         inspectionForm.reset();
-        manualLocationInput.value = '';
-        document.querySelectorAll('.preview-container').forEach(c => c.innerHTML = '');
-        locationDisplay.textContent = 'Not fetched yet';
-        locationCoords.value = '';
+        Object.keys(photoState).forEach(k => {
+            photoState[k] = [];
+            const container = document.getElementById(`${k}-photo${k === 'car' ? 's' : ''}-preview`);
+            if (container) container.innerHTML = '';
+        });
 
     } catch (error) {
-        console.error('❌ Submission error:', error);
-        showToast(`Upload failed: ${error.message}`, 'error');
+        showToast(`Error: ${error.message}`, 'error');
     } finally {
         isSubmitting = false;
         submitBtn.disabled = false;
@@ -264,12 +349,6 @@ inspectionForm.addEventListener('submit', async (e) => {
 
 // --- Admin Panel ---
 settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
-document.querySelectorAll('.close-modal').forEach(btn => {
-    btn.addEventListener('click', () => {
-        settingsModal.classList.add('hidden');
-        passwordModal.classList.add('hidden');
-    });
-});
 
 viewDataBtn.addEventListener('click', () => {
     settingsModal.classList.add('hidden');
@@ -298,7 +377,18 @@ backToFormBtn.addEventListener('click', () => {
     formSection.classList.remove('hidden');
 });
 
-// Fetch from Firestore
+// Helper for 12-hour format
+function format12h(date) {
+    return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+    });
+}
+
 async function fetchData() {
     dataContainer.innerHTML = '';
     adminLoading.classList.remove('hidden');
@@ -312,7 +402,6 @@ async function fetchData() {
             snap.forEach(doc => renderCard({ id: doc.id, ...doc.data() }));
         }
     } catch (err) {
-        console.error('Fetch error:', err);
         showToast('Failed to load records.', 'error');
     } finally {
         adminLoading.classList.add('hidden');
@@ -321,21 +410,42 @@ async function fetchData() {
 
 refreshDataBtn.addEventListener('click', fetchData);
 
+async function deleteEntry(id) {
+    if (!confirm('Are you sure you want to delete this record?')) return;
+    try {
+        await deleteDoc(doc(db, 'inspections', id));
+        showToast('Record deleted.', 'success');
+        fetchData();
+    } catch (err) {
+        showToast('Delete failed.', 'error');
+    }
+}
+
 function renderCard(data) {
     const card = document.createElement('div');
     card.className = 'data-card';
-    const date = data.timestamp ? data.timestamp.toDate().toLocaleString() : 'Just now';
-    const carPhotos = (data.carPhotoURLs || []).map(url =>
-        `<img src="${url}" onclick="window.open('${url}')" alt="Car Photo">`
-    ).join('');
+    const dateStr = data.timestamp ? format12h(data.timestamp.toDate()) : 'Just now';
+
+    const renderPhotos = (urls, label) => {
+        if (!urls || urls.length === 0) return '';
+        return urls.map(url => `
+            <div class="photo-item">
+                <img src="${url}" onclick="window.open('${url}')" alt="${label}">
+                <span class="photo-label">${label}</span>
+            </div>
+        `).join('');
+    };
 
     card.innerHTML = `
         <div class="card-header">
             <div>
                 <span class="id-badge">${data.idNumber}</span>
                 <h3 style="margin-top:0.5rem">${data.carNumber}</h3>
+                <p style="font-size:0.75rem;margin-top:0.2rem;color:var(--text-secondary)">${dateStr}</p>
             </div>
-            <span style="font-size:0.7rem;color:var(--text-secondary)">${date}</span>
+            <button class="btn-delete" onclick="window.deleteEntry('${data.id}')">
+                <i class="fas fa-trash"></i> Delete
+            </button>
         </div>
         <div class="card-body">
             <p><strong>KM:</strong> ${data.kilometer}</p>
@@ -343,12 +453,15 @@ function renderCard(data) {
             <p><strong>Complaint:</strong> ${data.complaint || 'None'}</p>
             <p><strong>Note:</strong> ${data.note || 'None'}</p>
             <div class="card-photos">
-                ${carPhotos}
-                ${data.oilPhotoURL    ? `<img src="${data.oilPhotoURL}"    onclick="window.open('${data.oilPhotoURL}')"    style="border:2px solid #ef4444" alt="Oil">` : ''}
-                ${data.cngPhotoURL    ? `<img src="${data.cngPhotoURL}"    onclick="window.open('${data.cngPhotoURL}')"    style="border:2px solid #10b981" alt="CNG">` : ''}
-                ${data.petrolPhotoURL ? `<img src="${data.petrolPhotoURL}" onclick="window.open('${data.petrolPhotoURL}')" style="border:2px solid #3b82f6" alt="Petrol">` : ''}
+                ${renderPhotos(data.carPhotoURLs, 'Car Photo')}
+                ${renderPhotos(data.oilPhotoURLs, 'Oil Level')}
+                ${renderPhotos(data.cngPhotoURLs, 'CNG Level')}
+                ${renderPhotos(data.petrolPhotoURLs, 'Petrol Level')}
             </div>
         </div>
     `;
     dataContainer.appendChild(card);
 }
+
+// Global exposure for onclick handlers
+window.deleteEntry = deleteEntry;
