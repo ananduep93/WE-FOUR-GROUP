@@ -1,5 +1,5 @@
-# Sensitive configuration files
-config.js
+# Sensitive configuration files (config.js is now included for GitHub Pages)
+# config.js 
 .env
 
 # Dependencies
