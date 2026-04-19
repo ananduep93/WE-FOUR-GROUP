@@ -8,6 +8,15 @@ const db = getFirestore(app);
 
 console.log("✅ Firebase initialized.");
 
+// --- Service Worker Registration ---
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('✅ SW Registered', reg.scope))
+            .catch(err => console.log('❌ SW Registration Failed', err));
+    });
+}
+
 // --- DOM Elements ---
 const inspectionForm = document.getElementById('inspection-form');
 const locationInput = document.getElementById('location');
@@ -20,6 +29,7 @@ const passwordModal = document.getElementById('password-modal');
 const adminPasswordInput = document.getElementById('admin-password');
 const verifyPasswordBtn = document.getElementById('verify-password');
 const passwordError = document.getElementById('password-error');
+const installAppBtn = document.getElementById('install-app-btn');
 
 const sourceModal = document.getElementById('source-modal');
 const sourceCameraBtn = document.getElementById('source-camera');
@@ -32,6 +42,16 @@ const dataContainer = document.getElementById('data-container');
 const refreshDataBtn = document.getElementById('refresh-data');
 const adminLoading = document.getElementById('admin-loading');
 const adminEmpty = document.getElementById('admin-empty');
+
+// --- PWA Installation State ---
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevent the mini-infobar from appearing on mobile
+    e.preventDefault();
+    // Stash the event so it can be triggered later.
+    deferredPrompt = e;
+    console.log('📥 beforeinstallprompt event captured');
+});
 
 // --- State ---
 let isSubmitting = false;
@@ -355,6 +375,29 @@ viewDataBtn.addEventListener('click', () => {
     passwordModal.classList.remove('hidden');
     adminPasswordInput.value = '';
     passwordError.classList.add('hidden');
+});
+
+installAppBtn.addEventListener('click', async () => {
+    if (deferredPrompt) {
+        // Show the install prompt
+        deferredPrompt.prompt();
+        // Wait for the user to respond to the prompt
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`User response to the install prompt: ${outcome}`);
+        // We've used the prompt, and can't use it again, but we'll keep the button
+        // as per user request. We'll null deferredPrompt until the next event.
+        deferredPrompt = null;
+    } else {
+        // If the prompt isn't available, show a toast. 
+        // This could be because it's already installed or the browser/OS doesn't support it.
+        showToast("Installation prompt not available. You can also use browser settings to install.", "info");
+    }
+    settingsModal.classList.add('hidden');
+});
+
+window.addEventListener('appinstalled', (event) => {
+    console.log('✅ App was installed.');
+    showToast("App installed successfully! 🎉", "success");
 });
 
 verifyPasswordBtn.addEventListener('click', () => {
