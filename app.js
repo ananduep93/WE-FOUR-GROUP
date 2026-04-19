@@ -1,17 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { firebaseConfig } from "./config.js";
 
-// --- Firebase Configuration ---
-const firebaseConfig = {
-    apiKey: "AIzaSyA2eDFWysL2EgzyhbgzbOPupqPgi3KCk3Y",
-    authDomain: "we-four-group.firebaseapp.com",
-    projectId: "we-four-group",
-    storageBucket: "we-four-group.firebasestorage.app",
-    messagingSenderId: "859067628360",
-    appId: "1:859067628360:web:8c178f024d83ac3c0c117d",
-    measurementId: "G-6W7DYWFKP4"
-};
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
