@@ -1,15 +1,12 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { firebaseConfig } from "./config.js";
-
+import { firebaseConfig, imgbbApiKey } from "./config.js";
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const storage = getStorage(app);
 
-console.log("✅ Firebase initialized. Storage bucket:", storage.app.options.storageBucket);
+console.log("✅ Firebase initialized with Free Firestore.");
 
 // --- DOM Elements ---
 const inspectionForm = document.getElementById('inspection-form');
@@ -140,25 +137,32 @@ function compressImage(file) {
     });
 }
 
-// --- Upload Single File to Storage ---
-async function uploadToStorage(file, path) {
+// --- Upload Single File to ImgBB (Completely Free) ---
+async function uploadToImgBB(file) {
     if (!file) return null;
-    console.log(`⬆️ Starting upload: ${path} (${(file.size / 1024).toFixed(1)} KB)`);
+    console.log(`⬆️ Starting ImgBB upload: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
     
-    const storageRef = ref(storage, path);
+    const formData = new FormData();
+    formData.append('image', file);
     
-    // Add a 30-second timeout so it never hangs silently
-    const uploadPromise = uploadBytes(storageRef, file).then(async (snapshot) => {
-        const url = await getDownloadURL(snapshot.ref);
-        console.log(`✅ Done: ${path}`);
-        return url;
-    });
-    
-    const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error(`Upload timed out after 30s: ${path}. Check Storage Rules in Firebase Console.`)), 30000)
-    );
-    
-    return Promise.race([uploadPromise, timeoutPromise]);
+    try {
+        const response = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log(`✅ Done: ${file.name} -> ${result.data.display_url}`);
+            return result.data.display_url;
+        } else {
+            throw new Error(result.error.message || "ImgBB upload failed");
+        }
+    } catch (error) {
+        console.error(`❌ ImgBB error:`, error);
+        throw new Error(`Failed to upload image: ${error.message}. Please check your ImgBB API Key in config.js.`);
+    }
 }
 
 // --- Update Button Progress Text ---
@@ -208,13 +212,13 @@ inspectionForm.addEventListener('submit', async (e) => {
 
         submitBtn.querySelector('.btn-text').textContent = `Uploading 0/${totalCount} files...`;
 
-        // Upload all in parallel
+        // Upload all in parallel to ImgBB
         const [oilURL, cngURL, petrolURL, ...carURLs] = await Promise.all([
-            compressedOil  ? uploadToStorage(compressedOil,  `inspections/${idNumber}/${ts}_oil.jpg`).then(u => { updateProgress(); return u; })  : Promise.resolve(null),
-            compressedCng  ? uploadToStorage(compressedCng,  `inspections/${idNumber}/${ts}_cng.jpg`).then(u => { updateProgress(); return u; })  : Promise.resolve(null),
-            compressedPetrol ? uploadToStorage(compressedPetrol, `inspections/${idNumber}/${ts}_petrol.jpg`).then(u => { updateProgress(); return u; }) : Promise.resolve(null),
+            compressedOil  ? uploadToImgBB(compressedOil).then(u => { updateProgress(); return u; })  : Promise.resolve(null),
+            compressedCng  ? uploadToImgBB(compressedCng).then(u => { updateProgress(); return u; })  : Promise.resolve(null),
+            compressedPetrol ? uploadToImgBB(compressedPetrol).then(u => { updateProgress(); return u; }) : Promise.resolve(null),
             ...compressedCars.map((f, i) =>
-                f ? uploadToStorage(f, `inspections/${idNumber}/${ts}_car${i}.jpg`).then(u => { updateProgress(); return u; }) : Promise.resolve(null)
+                f ? uploadToImgBB(f).then(u => { updateProgress(); return u; }) : Promise.resolve(null)
             )
         ]);
 
